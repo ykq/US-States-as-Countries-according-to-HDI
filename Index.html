@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Which countries match the Human Development Index of US states?</title>
+    <!-- set initial view -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <!-- pull in key css stylesheets -->
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css" />
+    <!-- set custom style parameters, especially for the map info box -->
+    <style type="text/css">
+    body {
+      margin:5 5 5px;
+    }
+    .info {
+      padding: 6px 8px;
+      font: 14px/16px Arial, Helvetica, sans-serif;
+      background: white;
+      background: rgba(255,255,255,0.8);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+    }
+    .info h4 {
+      margin: 0 0 5px;
+      color: #777;
+    }
+    .info h5 {
+      margin: 0 0 5px;
+      color: #777;
+      font-style: italic;
+    }
+    </style>
+</head>
+<!-- start body of webpage -->
+<body>
+    <!-- Introductory language explaining the project -->
+    <h2>Which countries match the Human Development Index of US states?</h2>
+    <p><h4>In 2011, the Economist published a <a href ="http://www.economist.com/blogs/dailychart/2011/01/comparing_us_states_countries">blog post</a> comparing US states with countries according to GDP. This project uses the <a href = "http://hdr.undp.org/en/statistics/"> UN Human Development Index </a> (which imputes measurements of health, education as well as income) to go beyond economic growth by visualizing inequality in Americans' opportunity to exercise our rights to "life, liberty, and the pursuit of happiness." It explores whether Americans from various states are essentially living in  different countries - with Alabamans living in the equivalent of Kazakhstan, Louisianans in Libya and the top 19 states in the US (including California, New York, Wisconsin and Minnesota) whose residents might as well live in Norway.</p></h4>
+    
+    <!-- display the map -->
+    <div id="map_1" style="height: 600px; margin: 3em 0;"></div>
+
+    <!-- pull in necessary JS libraries for map visualization -->
+    <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    <script type="text/javascript" src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
+    <!-- pull in JS data file with state, inequality data -->
+    <script type="text/javascript" src="us-states.js"></script>
+    <script type="text/javascript">
+
+      // create the map
+      var map = L.map('map_1').setView([37.8, -96.9], 4);
+
+      // pull in base map tiles from CloudMade using unique API key, add to map
+      var cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+        key: '074975eca3de4139ab72748b17a62cc0',
+        styleId: 22677
+      }).addTo(map);
+
+      // set color quantiles for choropleth visualization
+      function getColor(d) {
+        return d > 1 ? 'rgb(8,48,107)' :
+               d > 0.95  ? 'rgb(8,81,156)' :
+               d > 0.9  ? 'rgb(33,113,181)' :
+               d > 0.85  ? 'rgb(66,146,198)' :
+               d > 0.8   ? 'rgb(107,174,214)' :
+               d > 0.75   ? 'rgb(158,202,225)' :
+               d > 0.7   ? 'rgb(198,219,239)' :
+                          'rgb(247,251,255)';
+      }
+
+      // define the map features (state polygons)
+      function style(feature) {
+        return {
+          fillColor: getColor(feature.properties.hdi),
+          weight: 1,
+          opacity: 1,
+          color: 'white',
+          dashArray: '3',
+          fillOpacity: 0.7
+        };
+      }
+
+      // create info panel as new, custom control layer
+      var info = L.control();
+
+      // add a new div with a class "info" 
+      info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info'); 
+        this.update();
+        return this._div;
+      };
+
+      // update the control panel based on feature properties passed (into the code through a mouse hover)
+      info.update = function (props) {
+        this._div.innerHTML = '<h4>Which countries match the HDI of US States?</h4>' + (props ?
+          '<b>' + props.name + '</b>'+ '<br />' + '<h5>' + 'HDI: ' + props.hdi + '</h5>' + '<h4>Closest Country Match' + '</h4>' + '<b>' +props.country + '</b>'+ '<h5>HDI: ' + props.cHDI + '</h5>'
+          : 'Hover over a state to find out<br />');
+      };
+
+      // add info panel to map
+      info.addTo(map);
+
+      // define the geojson where our data sits
+      var geojson;
+
+      // highlight a state when you hover it
+      function highlightFeature(e) {
+        var layer = e.target;
+        layer.setStyle({
+          fillColor: '#78A700',
+          dashArray: '',
+          fillOpacity: 0.7
+        });
+
+        // special exceptions if you have old computers
+        if (!L.Browser.ie && !L.Browser.opera) {
+          layer.bringToFront();
+        }
+        // update the layer with new properties if necessary
+        info.update(layer.feature.properties);
+      }
+
+      // if cursor moved elsewhere, reset highlight function to return polygon to normal color scheme
+      function resetHighlight(e) {
+        geojson.resetStyle(e.target);
+        info.update();
+      }
+
+      // highlight each feature if you mouse over it, and reset the highlight once you move the mouse away
+      function onEachFeature(feature, layer) {
+        layer.on({
+          mouseover: highlightFeature,
+          mouseout: resetHighlight,
+        });
+      }
+
+      // pull in data from the JS as a geoJson data object, and add to map
+      geojson = L.geoJson(statesData, {
+        style: style,
+        onEachFeature: onEachFeature
+      }).addTo(map);
+        </script>
+
+    <!-- Additional final citations + methodological notes -->
+    <p><h4>About the data + methodology</h4></p>
+    <p><h5>Globally, the <a href = "http://hdr.undp.org/en/statistics/"> United Nations Human Development Index </a> is an annual, standard measure of a country's level of development - the extent to which it enlarges citizens' choices and allows them to lead a life they have reason to value. The HDI combines life expectancy, educational attainment as well as income indicators into a composite figure. The most recent data - from 2012 - was used. </p>
+    <p>Based off the UN methodology, the <a href="http://www.measureofamerica.org/"> Measure of America Project</a> has developed human development indicators for each state in the US by integrating data on life expectancy, educational attainment and school enrollment as well as median earnings. The most recent data - for 2013-2014 - was used. </p>
+    <p>(Note: any ties in matching states to countries by HDI were resolved by going with country that had the closest total population.)</p></h4>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+  </body>
+</html>
